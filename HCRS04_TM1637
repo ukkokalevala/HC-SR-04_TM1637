@@ -1,0 +1,57 @@
+#include <NewPing.h>
+#include <Arduino.h>
+#include <TM1637Display.h>
+
+// HC-SR04 sensor pins
+#define TRIGGER_PIN  D5
+#define ECHO_PIN     D6
+#define MAX_DISTANCE 600 // Maximum distance we want to ping for (in centimeters). Maximum sensor distance is rated at 400-500cm.
+
+// TM1637 Display pins
+#define CLK D1
+#define DIO D2
+
+// Create instances for the ultrasonic sensor and display
+NewPing sonar(TRIGGER_PIN, ECHO_PIN, MAX_DISTANCE);
+TM1637Display display(CLK, DIO);
+
+// Timing variables
+unsigned long previousMillis = 0;
+const long interval = 1000; // Interval to switch between cm and meters
+bool showCM = true; // Flag to toggle between cm and meters
+
+void setup() {
+  Serial.begin(115200);
+  display.setBrightness(0x0f); // Set display brightness
+}
+
+void loop() {
+  unsigned long currentMillis = millis();
+
+  if (currentMillis - previousMillis >= interval) {
+    previousMillis = currentMillis;
+
+    // Measure distance
+    int distanceCM = sonar.ping_cm();
+    float distanceM = distanceCM / 100.0; // Convert to meters
+
+    if (showCM) {
+      // Display distance in centimeters
+      Serial.print("Ping: ");
+      Serial.print(distanceCM);
+      Serial.println(" cm");
+      display.showNumberDec(distanceCM, false, 4, 0);
+    } else {
+      // Display distance in meters with one decimal place
+      int displayValueM = (int)(distanceM * 10); // Scale by 10 to show one decimal place
+      Serial.print("Ping: ");
+      Serial.print(distanceM, 1); // Print one decimal place for meters
+      Serial.println(" m");
+      display.showNumberDecEx(displayValueM, 0b01000000, true, 4, 0); // Display with decimal point
+    }
+
+    showCM = !showCM; // Toggle the display flag
+  }
+
+  delay(50); // Small delay to avoid rapid flickering
+}
